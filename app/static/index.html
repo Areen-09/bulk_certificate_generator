@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulk Certificate Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            border: "hsl(217.2 32.6% 17.5%)",
+            input: "hsl(217.2 32.6% 17.5%)",
+            ring: "hsl(224.3 76.3% 48%)",
+            background: "hsl(222.2 84% 4.9%)",
+            foreground: "hsl(210 40% 98%)",
+            primary: {
+              DEFAULT: "hsl(217.2 91.2% 59.8%)",
+              foreground: "hsl(222.2 47.4% 11.2%)",
+            },
+            secondary: {
+              DEFAULT: "hsl(217.2 32.6% 17.5%)",
+              foreground: "hsl(210 40% 98%)",
+            },
+            destructive: {
+              DEFAULT: "hsl(0 62.8% 30.6%)",
+              foreground: "hsl(210 40% 98%)",
+            },
+            muted: {
+              DEFAULT: "hsl(217.2 32.6% 17.5%)",
+              foreground: "hsl(215 20.2% 65.1%)",
+            },
+            accent: {
+              DEFAULT: "hsl(217.2 32.6% 17.5%)",
+              foreground: "hsl(210 40% 98%)",
+            },
+            card: {
+              DEFAULT: "hsl(222.2 84% 6.9%)",
+              foreground: "hsl(210 40% 98%)",
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #111827;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Navigation / Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+          <i data-lucide="award" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <span class="font-bold text-lg text-white tracking-tight">Bulk Certificate Generator</span>
+          <span class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">FastAPI + Async Worker</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <a href="/docs" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 transition">
+          <i data-lucide="file-code-2" class="w-4 h-4 mr-1.5 text-blue-400"></i>
+          Swagger API Docs
+        </a>
+        <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>System Healthy</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Top Tabs / View Switcher -->
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <nav class="flex space-x-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+        <button id="tab-create" onclick="switchTab('create')" class="tab-btn active px-4 py-2 text-sm font-medium rounded-lg transition flex items-center space-x-2 bg-blue-600 text-white shadow-sm">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Create Generation Job</span>
+        </button>
+        <button id="tab-monitor" onclick="switchTab('monitor')" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="activity" class="w-4 h-4"></i>
+          <span>Job Monitor</span>
+          <span id="active-job-indicator" class="hidden w-2 h-2 rounded-full bg-blue-400"></span>
+        </button>
+        <button id="tab-verify" onclick="switchTab('verify')" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="shield-check" class="w-4 h-4"></i>
+          <span>Verify Certificate</span>
+        </button>
+        <button id="tab-history" onclick="switchTab('history')" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="history" class="w-4 h-4"></i>
+          <span>Job History</span>
+        </button>
+      </nav>
+
+      <div class="text-xs text-slate-400 flex items-center space-x-1.5">
+        <i data-lucide="info" class="w-4 h-4 text-slate-500"></i>
+        <span>Pure Python ReportLab PDF Rendering & Per-Recipient Failure Isolation</span>
+      </div>
+    </div>
+
+    <!-- VIEW 1: CREATE BATCH GENERATION JOB -->
+    <div id="view-create" class="space-y-6">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+          <div>
+            <h2 class="text-lg font-semibold text-white tracking-tight">Create Bulk Certificate Generation Job</h2>
+            <p class="text-sm text-slate-400">Submit a batch of recipients. Asynchronous background worker generates PDFs and isolates failures.</p>
+          </div>
+          <button type="button" onclick="loadSampleData()" class="px-3 py-1.5 text-xs font-medium rounded-lg text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800 transition flex items-center space-x-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>Load Demo Data (with 1 test failure)</span>
+          </button>
+        </div>
+
+        <form id="job-form" onsubmit="handleJobSubmit(event)" class="space-y-6">
+          <!-- Job Metadata Row -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Event / Course Name <span class="text-rose-400">*</span></label>
+              <input type="text" id="event_name" required placeholder="e.g. Advanced AI System Architecture" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Issuing Organization / Authority</label>
+              <input type="text" id="issuer_name" placeholder="e.g. Certify Global Academy" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1.5">Date of Issuance</label>
+              <input type="date" id="issue_date" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Achievement Description / Text</label>
+            <input type="text" id="description" placeholder="for successful completion and demonstrating expertise in backend systems" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+          </div>
+
+          <!-- Recipients Dynamic Table -->
+          <div class="space-y-3 pt-2">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold text-white">Recipient List (<span id="recipient-count">0</span>)</h3>
+                <p class="text-xs text-slate-400">Each recipient will receive a unique certificate. Valid records succeed even if one fails.</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button type="button" onclick="addRecipientRow()" class="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition flex items-center space-x-1">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  <span>Add Recipient</span>
+                </button>
+                <button type="button" onclick="clearRecipients()" class="px-3 py-1.5 text-xs font-medium rounded-lg text-rose-300 bg-rose-950/40 hover:bg-rose-900 border border-rose-900 transition flex items-center space-x-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Clear</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 bg-slate-900/50 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <th class="px-4 py-3 w-10">#</th>
+                    <th class="px-4 py-3">Full Name <span class="text-rose-400">*</span></th>
+                    <th class="px-4 py-3">Email Address</th>
+                    <th class="px-4 py-3">Custom Data (JSON / Key:Value)</th>
+                    <th class="px-4 py-3 text-right w-20">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="recipients-tbody" class="divide-y divide-slate-800/60 text-sm">
+                  <!-- Dynamic rows go here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-4 flex justify-end">
+            <button type="submit" id="submit-btn" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm shadow-lg shadow-blue-600/30 transition flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Launch Bulk Generation Job</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- VIEW 2: JOB MONITOR & DOWNLOADS -->
+    <div id="view-monitor" class="space-y-6 hidden">
+      <!-- Active Job Overview Card -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <div class="flex items-center space-x-3">
+              <h2 id="job-title" class="text-xl font-bold text-white tracking-tight">No Active Job Loaded</h2>
+              <span id="job-status-badge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-400 border border-slate-700">IDLE</span>
+            </div>
+            <p id="job-meta" class="text-xs text-slate-400 mt-1">Select a job from history or submit a new batch to track live progress.</p>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <button id="refresh-status-btn" onclick="pollJobStatus()" class="px-3.5 py-2 text-xs font-medium rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition flex items-center space-x-1.5">
+              <i data-lucide="refresh-cw" id="refresh-icon" class="w-3.5 h-3.5"></i>
+              <span>Refresh Status</span>
+            </button>
+            <button id="download-zip-btn" onclick="downloadJobZip()" disabled class="px-4 py-2 text-xs font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 disabled:cursor-not-allowed transition flex items-center space-x-1.5 shadow-md shadow-emerald-600/20">
+              <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+              <span>Download All Certificates (.ZIP)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Bar Section -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-medium">
+            <span class="text-slate-300">Processing Progress</span>
+            <span id="progress-percentage-text" class="text-blue-400">0%</span>
+          </div>
+          <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+            <div id="progress-bar-fill" class="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Metric Counter Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400">Total Recipients</span>
+            <p id="stat-total" class="text-2xl font-bold text-white mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400">Processed</span>
+            <p id="stat-processed" class="text-2xl font-bold text-blue-400 mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400">Successful</span>
+            <p id="stat-successful" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+          </div>
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <span class="text-xs font-medium text-slate-400">Failed Records</span>
+            <p id="stat-failed" class="text-2xl font-bold text-rose-400 mt-1">0</p>
+          </div>
+        </div>
+
+        <!-- Recipient Detailed Table -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white">Recipient Certificate Items</h3>
+            <span class="text-xs text-slate-400">Individual PDF downloads and error descriptions below</span>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 max-h-96 custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 bg-slate-900/60 text-[11px] font-semibold text-slate-400 uppercase tracking-wider sticky top-0 backdrop-blur-md">
+                  <th class="px-4 py-3">Recipient Name</th>
+                  <th class="px-4 py-3">Email</th>
+                  <th class="px-4 py-3">Verification Code</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Details / Failure Reason</th>
+                  <th class="px-4 py-3 text-right">Download</th>
+                </tr>
+              </thead>
+              <tbody id="monitor-tbody" class="divide-y divide-slate-800/60 text-sm">
+                <tr>
+                  <td colspan="6" class="px-4 py-8 text-center text-xs text-slate-500">No job loaded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: VERIFY CERTIFICATE -->
+    <div id="view-verify" class="space-y-6 hidden">
+      <div class="max-w-2xl mx-auto bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div>
+          <h2 class="text-lg font-semibold text-white tracking-tight flex items-center space-x-2">
+            <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+            <span>Public Certificate Verification Portal</span>
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">Verify the authenticity of any certificate issued by this system using its unique verification ID.</p>
+        </div>
+
+        <div class="flex space-x-2">
+          <input type="text" id="verify-code-input" placeholder="Enter Certificate Code (e.g. CERT-A1B2C3D4)" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 uppercase tracking-wider focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+          <button onclick="handleVerifyCertificate()" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition flex items-center space-x-1.5 shadow-md shadow-emerald-600/20">
+            <i data-lucide="search" class="w-4 h-4"></i>
+            <span>Verify</span>
+          </button>
+        </div>
+
+        <!-- Verification Result Box -->
+        <div id="verify-result-box" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: JOB HISTORY -->
+    <div id="view-history" class="space-y-6 hidden">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white tracking-tight">Recent Generation Jobs</h2>
+            <p class="text-sm text-slate-400">History of all bulk certificate batches executed on this server.</p>
+          </div>
+          <button onclick="loadJobHistory()" class="px-3.5 py-1.5 text-xs font-medium rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition flex items-center space-x-1">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Refresh History</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 bg-slate-900/50 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                <th class="px-4 py-3">Event Name</th>
+                <th class="px-4 py-3">Issuer</th>
+                <th class="px-4 py-3">Issue Date</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Progress</th>
+                <th class="px-4 py-3">Counts (Total / OK / Failed)</th>
+                <th class="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody" class="divide-y divide-slate-800/60 text-sm">
+              <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-xs text-slate-500">Loading history...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- Frontend Logic -->
+  <script>
+    let activeJobId = null;
+    let pollInterval = null;
+
+    // Initialize Lucide icons
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      // Set default issue date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('issue_date').value = today;
+      // Add initial recipient row
+      addRecipientRow();
+    });
+
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `pointer-events-auto flex items-center space-x-2 px-4 py-3 rounded-xl border shadow-xl text-xs font-medium transition-all transform duration-300 translate-y-2 opacity-0 ${
+        type === "success"
+          ? "bg-emerald-950/90 border-emerald-800 text-emerald-200"
+          : type === "error"
+          ? "bg-rose-950/90 border-rose-800 text-rose-200"
+          : "bg-slate-900/90 border-slate-700 text-slate-200"
+      }`;
+
+      let icon = type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info";
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      }, 50);
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function switchTab(tab) {
+      const tabs = ["create", "monitor", "verify", "history"];
+      tabs.forEach((t) => {
+        document.getElementById(`view-${t}`).classList.add("hidden");
+        const btn = document.getElementById(`tab-${t}`);
+        btn.classList.remove("bg-blue-600", "text-white");
+        btn.classList.add("text-slate-400");
+      });
+
+      document.getElementById(`view-${tab}`).classList.remove("hidden");
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      activeBtn.classList.remove("text-slate-400");
+      activeBtn.classList.add("bg-blue-600", "text-white");
+
+      if (tab === "history") loadJobHistory();
+      lucide.createIcons();
+    }
+
+    function addRecipientRow(name = "", email = "", customData = "") {
+      const tbody = document.getElementById("recipients-tbody");
+      const count = tbody.querySelectorAll("tr").length + 1;
+
+      const row = document.createElement("tr");
+      row.className = "hover:bg-slate-900/40 transition group";
+      row.innerHTML = `
+        <td class="px-4 py-2.5 text-xs text-slate-500 row-idx">${count}</td>
+        <td class="px-4 py-2.5">
+          <input type="text" value="${name}" placeholder="Recipient Full Name" required class="rec-name w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500" />
+        </td>
+        <td class="px-4 py-2.5">
+          <input type="email" value="${email}" placeholder="recipient@example.com" class="rec-email w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500" />
+        </td>
+        <td class="px-4 py-2.5">
+          <input type="text" value="${customData}" placeholder='{"grade": "Distinction"}' class="rec-custom w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500" />
+        </td>
+        <td class="px-4 py-2.5 text-right">
+          <button type="button" onclick="this.closest('tr').remove(); updateRecipientCount();" class="text-slate-500 hover:text-rose-400 p-1 rounded transition">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(row);
+      updateRecipientCount();
+      lucide.createIcons();
+    }
+
+    function clearRecipients() {
+      document.getElementById("recipients-tbody").innerHTML = "";
+      addRecipientRow();
+    }
+
+    function updateRecipientCount() {
+      const rows = document.querySelectorAll("#recipients-tbody tr");
+      document.getElementById("recipient-count").textContent = rows.length;
+      rows.forEach((r, idx) => {
+        const idxCell = r.querySelector(".row-idx");
+        if (idxCell) idxCell.textContent = idx + 1;
+      });
+    }
+
+    function loadSampleData() {
+      document.getElementById("event_name").value = "Executive Cloud Architecture & AI Masterclass";
+      document.getElementById("issuer_name").value = "Antigravity Global Systems";
+      document.getElementById("description").value = "for successfully completing the rigorous 40-hour architectural evaluation and capstone";
+
+      const tbody = document.getElementById("recipients-tbody");
+      tbody.innerHTML = "";
+
+      const samples = [
+        { name: "Dr. Evelyn Reed", email: "evelyn.reed@example.com", custom: '{"grade": "High Distinction", "hours": 40}' },
+        { name: "Marcus Vance", email: "marcus.v@example.com", custom: '{"grade": "Distinction", "hours": 40}' },
+        { name: "Sarah Connor", email: "s.connor@cyberdyne.org", custom: '{"grade": "Merit"}' },
+        { name: "Kenji Sato", email: "kenji@example.jp", custom: '{"grade": "Pass", "hours": 40}' },
+        { name: "", email: "malformed-recipient-email", custom: '{"notes": "This record will intentionally test failure isolation"}' }
+      ];
+
+      samples.forEach(s => addRecipientRow(s.name, s.email, s.custom));
+      showToast("Loaded sample batch with 4 valid recipients and 1 intentional failure test.", "info");
+    }
+
+    async function handleJobSubmit(e) {
+      e.preventDefault();
+      const submitBtn = document.getElementById("submit-btn");
+      submitBtn.disabled = true;
+
+      const event_name = document.getElementById("event_name").value.trim();
+      const issuer_name = document.getElementById("issuer_name").value.trim() || undefined;
+      const issue_date = document.getElementById("issue_date").value || undefined;
+      const description = document.getElementById("description").value.trim() || undefined;
+
+      const rows = document.querySelectorAll("#recipients-tbody tr");
+      const recipients = [];
+
+      rows.forEach(r => {
+        const name = r.querySelector(".rec-name")?.value;
+        const email = r.querySelector(".rec-email")?.value.trim() || undefined;
+        const customRaw = r.querySelector(".rec-custom")?.value.trim();
+        let custom_data = undefined;
+
+        if (customRaw) {
+          try {
+            custom_data = JSON.parse(customRaw);
+          } catch {
+            custom_data = { meta: customRaw };
+          }
+        }
+
+        recipients.push({ recipient_name: name, recipient_email: email, custom_data });
+      });
+
+      if (recipients.length === 0) {
+        showToast("Please add at least one recipient.", "error");
+        submitBtn.disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/v1/certificates/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event_name, issuer_name, issue_date, description, recipients })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "Failed to create job.");
+        }
+
+        const data = await res.json();
+        activeJobId = data.job_id;
+
+        showToast(`Job accepted! ID: ${data.job_id.slice(0, 8)}... Queued for background processing.`, "success");
+        document.getElementById("active-job-indicator").classList.remove("hidden");
+        switchTab("monitor");
+        startPollingJob(activeJobId);
+
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    function startPollingJob(jobId) {
+      activeJobId = jobId;
+      if (pollInterval) clearInterval(pollInterval);
+      pollJobStatus();
+      pollInterval = setInterval(pollJobStatus, 1500);
+    }
+
+    async function pollJobStatus() {
+      if (!activeJobId) return;
+
+      const icon = document.getElementById("refresh-icon");
+      if (icon) icon.classList.add("animate-spin");
+
+      try {
+        const res = await fetch(`/api/v1/certificates/jobs/${activeJobId}`);
+        if (!res.ok) throw new Error("Could not retrieve job status");
+        const job = await res.json();
+
+        renderJobStatus(job);
+
+        // If completed or fully failed, stop polling
+        if (["COMPLETED", "PARTIALLY_FAILED", "FAILED"].includes(job.status)) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+          document.getElementById("active-job-indicator").classList.add("hidden");
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (icon) icon.classList.remove("animate-spin");
+      }
+    }
+
+    function renderJobStatus(job) {
+      document.getElementById("job-title").textContent = job.event_name;
+      document.getElementById("job-meta").textContent = `Job ID: ${job.id} | Issuer: ${job.issuer_name} | Date: ${job.issue_date}`;
+
+      const badge = document.getElementById("job-status-badge");
+      badge.textContent = job.status;
+
+      const badgeStyles = {
+        PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+        PROCESSING: "bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse",
+        COMPLETED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        PARTIALLY_FAILED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+        FAILED: "bg-rose-500/10 text-rose-400 border-rose-500/20"
+      };
+      badge.className = `px-2.5 py-1 text-xs font-semibold rounded-full border ${badgeStyles[job.status] || 'bg-slate-800 text-slate-400'}`;
+
+      document.getElementById("progress-percentage-text").textContent = `${job.progress_percentage}%`;
+      document.getElementById("progress-bar-fill").style.width = `${job.progress_percentage}%`;
+
+      document.getElementById("stat-total").textContent = job.counters.total;
+      document.getElementById("stat-processed").textContent = job.counters.processed;
+      document.getElementById("stat-successful").textContent = job.counters.successful;
+      document.getElementById("stat-failed").textContent = job.counters.failed;
+
+      const zipBtn = document.getElementById("download-zip-btn");
+      zipBtn.disabled = job.counters.successful === 0;
+
+      // Render recipients table
+      const tbody = document.getElementById("monitor-tbody");
+      tbody.innerHTML = "";
+
+      job.recipients.forEach(cert => {
+        const row = document.createElement("tr");
+        row.className = "hover:bg-slate-900/40 transition";
+
+        let statusBadge = "";
+        if (cert.status === "COMPLETED") {
+          statusBadge = '<span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">COMPLETED</span>';
+        } else if (cert.status === "FAILED") {
+          statusBadge = '<span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">FAILED</span>';
+        } else if (cert.status === "GENERATING") {
+          statusBadge = '<span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse">GENERATING</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-slate-800 text-slate-400 border border-slate-700">PENDING</span>';
+        }
+
+        const downloadAction = cert.download_url
+          ? `<a href="${cert.download_url}" target="_blank" class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5 mr-1"></i> PDF
+             </a>`
+          : '<span class="text-xs text-slate-600">—</span>';
+
+        row.innerHTML = `
+          <td class="px-4 py-3 font-medium text-white">${cert.recipient_name || '<em class="text-slate-500">(Empty)</em>'}</td>
+          <td class="px-4 py-3 text-slate-400">${cert.recipient_email || '—'}</td>
+          <td class="px-4 py-3 font-mono text-xs text-indigo-300">${cert.certificate_code || '—'}</td>
+          <td class="px-4 py-3">${statusBadge}</td>
+          <td class="px-4 py-3 text-xs ${cert.error_message ? 'text-rose-400 font-mono' : 'text-slate-400'}">${cert.error_message || 'Generated successfully'}</td>
+          <td class="px-4 py-3 text-right">${downloadAction}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      lucide.createIcons();
+    }
+
+    function downloadJobZip() {
+      if (!activeJobId) return;
+      window.location.href = `/api/v1/certificates/jobs/${activeJobId}/download`;
+    }
+
+    async function handleVerifyCertificate() {
+      const codeInput = document.getElementById("verify-code-input");
+      const code = codeInput.value.trim();
+      const resultBox = document.getElementById("verify-result-box");
+
+      if (!code) {
+        showToast("Please enter a certificate verification code.", "error");
+        return;
+      }
+
+      resultBox.classList.remove("hidden");
+      resultBox.innerHTML = '<div class="p-6 text-center text-sm text-slate-400">Verifying code with official records...</div>';
+
+      try {
+        const res = await fetch(`/api/v1/certificates/verify/${encodeURIComponent(code)}`);
+        if (!res.ok) {
+          resultBox.innerHTML = `
+            <div class="bg-rose-950/40 border border-rose-900 rounded-xl p-5 space-y-3">
+              <div class="flex items-center space-x-2 text-rose-400 font-semibold text-sm">
+                <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+                <span>Certificate Verification Failed</span>
+              </div>
+              <p class="text-xs text-rose-300">The verification code <strong>"${code}"</strong> was not found in the official registry or has been revoked.</p>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        const data = await res.json();
+        resultBox.innerHTML = `
+          <div class="bg-emerald-950/40 border border-emerald-800 rounded-xl p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-emerald-800/60 pb-3">
+              <div class="flex items-center space-x-2 text-emerald-400 font-semibold text-base">
+                <i data-lucide="badge-check" class="w-6 h-6"></i>
+                <span>Official Authenticated Certificate</span>
+              </div>
+              <span class="px-2.5 py-0.5 text-xs font-mono font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">${data.certificate_code}</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <span class="text-slate-400 font-medium">Recipient Name:</span>
+                <p class="text-white text-sm font-semibold mt-0.5">${data.recipient_name}</p>
+              </div>
+              <div>
+                <span class="text-slate-400 font-medium">Event / Program:</span>
+                <p class="text-white text-sm font-semibold mt-0.5">${data.event_name}</p>
+              </div>
+              <div>
+                <span class="text-slate-400 font-medium">Issuing Authority:</span>
+                <p class="text-slate-200 mt-0.5">${data.issuer_name}</p>
+              </div>
+              <div>
+                <span class="text-slate-400 font-medium">Date of Issuance:</span>
+                <p class="text-slate-200 mt-0.5">${data.issue_date}</p>
+              </div>
+            </div>
+
+            ${data.description ? `<div class="text-xs border-t border-emerald-800/40 pt-3 text-slate-300 italic">"${data.description}"</div>` : ''}
+          </div>
+        `;
+        lucide.createIcons();
+
+      } catch (err) {
+        resultBox.innerHTML = `<div class="p-4 text-rose-400 text-xs">Error communicating with verification server.</div>`;
+      }
+    }
+
+    async function loadJobHistory() {
+      const tbody = document.getElementById("history-tbody");
+      tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-xs text-slate-500">Loading history...</td></tr>';
+
+      try {
+        const res = await fetch("/api/v1/certificates/jobs?limit=20");
+        if (!res.ok) throw new Error("Failed to load history.");
+        const jobs = await res.json();
+
+        if (jobs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-xs text-slate-500">No jobs recorded yet.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = "";
+        jobs.forEach(j => {
+          const row = document.createElement("tr");
+          row.className = "hover:bg-slate-900/40 transition";
+
+          const badgeStyles = {
+            PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+            PROCESSING: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+            COMPLETED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+            PARTIALLY_FAILED: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+            FAILED: "bg-rose-500/10 text-rose-400 border-rose-500/20"
+          };
+
+          row.innerHTML = `
+            <td class="px-4 py-3 font-medium text-white">${j.event_name}</td>
+            <td class="px-4 py-3 text-slate-400">${j.issuer_name}</td>
+            <td class="px-4 py-3 text-xs text-slate-400">${j.issue_date}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full border ${badgeStyles[j.status] || 'bg-slate-800 text-slate-400'}">${j.status}</span>
+            </td>
+            <td class="px-4 py-3 text-xs font-medium text-blue-400">${j.progress_percentage}%</td>
+            <td class="px-4 py-3 text-xs text-slate-300">
+              <span class="font-bold text-white">${j.total_count}</span> total • 
+              <span class="text-emerald-400 font-semibold">${j.successful_count}</span> ok • 
+              <span class="text-rose-400 font-semibold">${j.failed_count}</span> fail
+            </td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="inspectJob('${j.id}')" class="px-2.5 py-1 text-xs font-medium rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">
+                Inspect
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-4 text-center text-xs text-rose-400">${err.message}</td></tr>`;
+      }
+    }
+
+    function inspectJob(jobId) {
+      activeJobId = jobId;
+      switchTab("monitor");
+      startPollingJob(jobId);
+    }
+  </script>
+</body>
+</html>
