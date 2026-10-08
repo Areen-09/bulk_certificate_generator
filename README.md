@@ -352,24 +352,6 @@ curl "http://127.0.0.1:8000/api/v1/certificates/verify/CERT-8F3A19B2"
 }
 ```
 
----
-
-## Interview Defense & Architectural Decisions
-
-### 1. Why FastAPI `BackgroundTasks` instead of Celery / Redis?
-- **Zero-Friction Review Experience**: Evaluators can run and test the complete system with a single Python command without needing Docker, Redis, or RabbitMQ running locally.
-- **Relational Persistence**: All state transitions (`PENDING` -> `PROCESSING` -> `COMPLETED`) are committed directly to SQLite/PostgreSQL, ensuring queries and progress checks are resilient and reliable.
-- **Production Portability**: The `JobProcessor.process_job` method is designed as a standalone async service. Moving to Celery or ARQ in a multi-server setup requires only wrapping that function in a task decorator without modifying domain or rendering logic.
-
-### 2. Why ReportLab over HTML-to-PDF (WeasyPrint)?
-- **Native Pure Python**: WeasyPrint requires external native C-libraries (`pango`, `cairo`, `gobject`) that frequently fail to link or install on Windows and lean Linux containers.
-- **Precision & Vector Quality**: ReportLab renders true vector shapes, crisp geometric borders, and custom letterforms that remain sharp at any zoom level, generating lightweight PDFs (~3-10 KB each).
-
-### 3. How is Recipient Failure Isolated?
-- When a client submits a batch of 100 participants, a single typo (e.g. empty name or invalid email) should not abort the remaining 99 valid certificates.
-- The `JobProcessor` evaluates each recipient independently within isolated `try/except` and validation checkpoints.
-- If a record fails, its status is marked `FAILED` with a descriptive message, and the job status transitions to `PARTIALLY_FAILED`, allowing the client to inspect failed rows, fix the data, and re-submit only the affected recipients.
-
 ### 4. How is Idempotency Handled?
 - If a job has already finalized (`COMPLETED`, `PARTIALLY_FAILED`, `FAILED`), repeated worker calls exit immediately.
 - If individual certificate records have already completed, they are skipped rather than re-rendered.
