@@ -351,8 +351,3 @@ curl "http://127.0.0.1:8000/api/v1/certificates/verify/CERT-8F3A19B2"
   "created_at": "2026-10-08T17:30:00"
 }
 ```
-
-### 4. How is Idempotency Handled?
-- If a job has already finalized (`COMPLETED`, `PARTIALLY_FAILED`, `FAILED`), repeated worker calls exit immediately.
-- If individual certificate records have already completed, they are skipped rather than re-rendered.
-- Counters (`successful_count`, `failed_count`, `processed_count`) are computed from the underlying certificate items to prevent counter drift.
